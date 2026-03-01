@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fine-tuning LLMs — 20 Min Master Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --accent: #7c6eff;
+    --accent2: #ff6e7c;
+    --accent3: #6effcb;
+    --accent4: #ffe06e;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --border: rgba(255,255,255,0.07);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,110,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,110,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+    animation: fadeDown 0.7s ease both;
+  }
+
+  .timer-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 18px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 48px;
+    animation: fadeUp 0.7s 0.1s ease both;
+  }
+
+  .progress-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .progress-track {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .progress-steps span.done { color: var(--accent3); }
+
+  /* ── SECTION HEADINGS ── */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .section-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border: 1px solid var(--accent);
+    padding: 3px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 16px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .card:hover {
+    border-color: rgba(124,110,255,0.3);
+    transform: translateY(-2px);
+  }
+
+  .card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .card p { font-size: 13px; color: #b0b0c0; }
+
+  /* ── BIG DEFINITION BOX ── */
+  .definition-box {
+    background: linear-gradient(135deg, rgba(124,110,255,0.1), rgba(110,255,203,0.05));
+    border: 1px solid rgba(124,110,255,0.3);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 40px;
+    animation: fadeUp 0.7s 0.2s ease both;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .definition-box::before {
+    content: '"';
+    position: absolute;
+    top: -20px; right: 20px;
+    font-size: 120px;
+    color: rgba(124,110,255,0.08);
+    font-family: 'Syne', sans-serif;
+    line-height: 1;
+  }
+
+  .definition-box .big-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .definition-box .analogy {
+    font-size: 12px;
+    color: var(--accent3);
+    border-left: 2px solid var(--accent3);
+    padding-left: 12px;
+    margin-top: 12px;
+  }
+
+  /* ── FLOW DIAGRAM ── */
+  .diagram-section {
+    margin-bottom: 48px;
+    animation: fadeUp 0.7s 0.3s ease both;
+  }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 24px 0;
+    row-gap: 12px;
+  }
+
+  .flow-node {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    text-align: center;
+    min-width: 120px;
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .flow-node:hover {
+    border-color: var(--accent);
+    background: rgba(124,110,255,0.1);
+    transform: scale(1.05);
+  }
+
+  .flow-node .node-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+  .flow-node .node-label { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; color: var(--text); }
+  .flow-node .node-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .flow-node.highlight { border-color: var(--accent); background: rgba(124,110,255,0.15); }
+  .flow-node.green { border-color: var(--accent3); }
+  .flow-node.green:hover { background: rgba(110,255,203,0.1); }
+  .flow-node.red { border-color: var(--accent2); }
+  .flow-node.red:hover { background: rgba(255,110,124,0.1); }
+
+  .arrow {
+    color: var(--muted);
+    font-size: 18px;
+    padding: 0 6px;
+    flex-shrink: 0;
+  }
+
+  /* ── COMPARISON TABLE ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 600px) { .compare-grid { grid-template-columns: 1fr; } }
+
+  .compare-card {
+    border-radius: 14px;
+    padding: 22px;
+    border: 1px solid var(--border);
+  }
+
+  .compare-card.ft { background: rgba(124,110,255,0.08); border-color: rgba(124,110,255,0.25); }
+  .compare-card.rag { background: rgba(110,255,203,0.05); border-color: rgba(110,255,203,0.2); }
+
+  .compare-card .badge {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+
+  .ft .badge { background: rgba(124,110,255,0.2); color: var(--accent); }
+  .rag .badge { background: rgba(110,255,203,0.15); color: var(--accent3); }
+
+  .compare-card ul { list-style: none; padding: 0; }
+  .compare-card ul li { font-size: 12px; color: #b0b0c0; padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .compare-card ul li:last-child { border-bottom: none; }
+  .compare-card ul li::before { content: '→ '; color: var(--accent); }
+  .rag ul li::before { color: var(--accent3); }
+
+  /* ── TYPES GRID ── */
+  .types-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .type-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .type-card:hover { transform: translateY(-3px); border-color: rgba(255,224,110,0.4); }
+
+  .type-icon { font-size: 24px; margin-bottom: 10px; }
+  .type-name { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .type-desc { font-size: 11px; color: var(--muted); }
+  .type-use { font-size: 10px; color: var(--accent4); margin-top: 8px; }
+
+  /* ── STEPS ── */
+  .steps-list { list-style: none; padding: 0; }
+
+  .steps-list li {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .steps-list li:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--accent);
+    min-width: 32px;
+    line-height: 1.2;
+  }
+
+  .step-content h4 { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .step-content p { font-size: 12px; color: var(--muted); }
+  .step-content .tip { font-size: 11px; color: var(--accent3); margin-top: 6px; }
+
+  /* ── MEMORY AIDS ── */
+  .memory-box {
+    background: linear-gradient(135deg, rgba(255,224,110,0.08), rgba(255,110,124,0.05));
+    border: 1px solid rgba(255,224,110,0.25);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .memory-box .mem-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent4);
+    margin-bottom: 16px;
+  }
+
+  .acronym {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .acronym-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .acronym-letter {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--accent4);
+    min-width: 32px;
+  }
+
+  .acronym-text { font-size: 13px; color: var(--text); }
+  .acronym-sub { font-size: 11px; color: var(--muted); }
+
+  /* ── QUIZ SECTION ── */
+  .quiz-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 40px;
+  }
+
+  .quiz-q {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+
+  .quiz-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+  }
+
+  .quiz-btn:hover { border-color: var(--accent); background: rgba(124,110,255,0.1); }
+  .quiz-btn.correct { border-color: var(--accent3); background: rgba(110,255,203,0.1); color: var(--accent3); }
+  .quiz-btn.wrong { border-color: var(--accent2); background: rgba(255,110,124,0.1); color: var(--accent2); }
+
+  .quiz-feedback {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    display: none;
+  }
+
+  .next-q {
+    margin-top: 14px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: none;
+    transition: opacity 0.2s;
+  }
+
+  .next-q:hover { opacity: 0.85; }
+
+  /* ── CHEATSHEET ── */
+  .cheatsheet {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .cs-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .cs-term {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .cs-def { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* ── SECTION WRAPPERS ── */
+  .section { margin-bottom: 48px; animation: fadeUp 0.5s ease both; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── INLINE CODE ── */
+  code {
+    background: rgba(124,110,255,0.15);
+    color: var(--accent);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  /* ── DIVIDER ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  /* ── SCROLL INDICATOR ── */
+  .scroll-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    z-index: 999;
+    width: 0%;
+    transition: width 0.1s;
+  }
+</style>
+</head>
+<body>
+
+<div class="scroll-bar" id="scrollBar"></div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="timer-badge">⏱ 20 MIN MASTER GUIDE</div>
+    <h1>Fine-tuning <span>LLMs</span><br>& AI Models</h1>
+    <p class="subtitle">// notes · diagrams · quiz · cheatsheet</p>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-container">
+    <div class="progress-label">// your progress</div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-steps">
+      <span id="s1">What is it?</span>
+      <span id="s2">vs RAG</span>
+      <span id="s3">How it works</span>
+      <span id="s4">Types</span>
+      <span id="s5">Best practices</span>
+      <span id="s6">Quiz ✓</span>
+    </div>
+  </div>
+
+  <!-- SECTION 1: WHAT IS IT -->
+  <div class="section" id="sec1">
+    <div class="section-label">
+      <span class="section-num">01</span>
+      <span class="section-title">What is Fine-tuning?</span>
+    </div>
+
+    <div class="definition-box">
+      <div class="big-text">Fine-tuning = taking a pre-trained model and training it further on your specific data to make it better at your specific task.</div>
+      <div class="analogy">💡 Analogy: A med school grad (pre-trained) becomes a cardiologist (fine-tuned). The base knowledge stays, specialization is added on top.</div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="card">
+        <h3>🧠 What it does</h3>
+        <p>Updates the model's weights using your task-specific examples. The model <em>learns</em> your domain, tone, format.</p>
+      </div>
+      <div class="card">
+        <h3>📦 What you need</h3>
+        <p>A labeled dataset of input → output pairs. Usually hundreds to thousands of examples minimum.</p>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- SECTION 2: vs RAG -->
+  <div class="section" id="sec2">
+    <div class="section-label">
+      <span class="section-num">02</span>
+      <span class="section-title">Fine-tuning vs RAG — When to Use What?</span>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-card ft">
+        <span class="badge">Fine-tuning</span>
+        <ul>
+          <li>Needs to learn a new style/format</li>
+          <li>Task requires consistent behavior</li>
+          <li>Data doesn't update often</li>
+          <li>Speed matters (no retrieval step)</li>
+          <li>Domain-specific language (legal, medical)</li>
+        </ul>
+      </div>
+      <div class="compare-card rag">
+        <span class="badge">RAG</span>
+        <ul>
+          <li>Needs latest/live information</li>
+          <li>Large knowledge base to reference</li>
+          <li>Data changes frequently</li>
+          <li>Need to cite specific sources</li>
+          <li>Limited labeled training data</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="background:rgba(255,224,110,0.07);border:1px solid rgba(255,224,110,0.2);border-radius:12px;padding:16px;font-size:12px;color:#b0b0c0;">
+      ⚡ <strong style="color:var(--accent4)">Key insight:</strong> They're NOT mutually exclusive. You can fine-tune a model AND use RAG together for best results.
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- SECTION 3: FLOW DIAGRAM -->
+  <div class="diagram-section" id="sec3">
+    <div class="section-label">
+      <span class="section-num">03</span>
+      <span class="section-title">How Fine-tuning Works — Step by Step</span>
+    </div>
+
+    <div class="flow">
+      <div class="flow-node">
+        <span class="node-icon">🌐</span>
+        <div class="node-label">Pre-trained Model</div>
+        <div class="node-sub">GPT, LLaMA, Gemini…</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node highlight">
+        <span class="node-icon">📦</span>
+        <div class="node-label">Your Dataset</div>
+        <div class="node-sub">Input → Output pairs</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node">
+        <span class="node-icon">⚙️</span>
+        <div class="node-label">Training Run</div>
+        <div class="node-sub">Update weights</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-node green">
+        <span class="node-icon">✅</span>
+        <div class="node-label">Fine-tuned Model</div>
+        <div class="node-sub">Specialized!</div>
+      </div>
+    </div>
+
+    <ul class="steps-list">
+      <li>
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Data Preparation</h4>
+          <p>Collect, clean and format your examples as prompt-completion pairs. Quality > Quantity.</p>
+          <div class="tip">→ Tip: 1000 clean examples beats 10,000 noisy ones</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Choose Base Model</h4>
+          <p>Pick the right pre-trained model for your domain. Smaller models fine-tune faster and cheaper.</p>
+          <div class="tip">→ Tip: Start small — fine-tune a 7B model before jumping to 70B</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Choose Approach</h4>
+          <p>Full fine-tuning, LoRA, PEFT, etc. Most use LoRA now — cheap, fast, same results.</p>
+          <div class="tip">→ Tip: LoRA is the industry standard in 2024+</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Train & Evaluate</h4>
+          <p>Run training, monitor loss curve. Evaluate on held-out test set.</p>
+          <div class="tip">→ Watch for overfitting: val loss rising while train loss drops</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h4>Deploy</h4>
+          <p>Merge weights or serve adapter separately. Monitor in production and iterate.</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <hr>
+
+  <!-- SECTION 4: TYPES -->
+  <div class="section" id="sec4">
+    <div class="section-label">
+      <span class="section-num">04</span>
+      <span class="section-title">Types of Fine-tuning</span>
+    </div>
+
+    <div class="types-grid">
+      <div class="type-card">
+        <div class="type-icon">🔥</div>
+        <div class="type-name">Full Fine-tuning</div>
+        <div class="type-desc">Update ALL model weights. Most powerful but expensive.</div>
+        <div class="type-use">Use: When you have big budget + lots of data</div>
+      </div>
+      <div class="type-card">
+        <div class="type-icon">⚡</div>
+        <div class="type-name">LoRA</div>
+        <div class="type-desc">Low-Rank Adaptation. Trains tiny adapter layers only. 90% cheaper.</div>
+        <div class="type-use">Use: Most real-world cases — best bang for buck</div>
+      </div>
+      <div class="type-card">
+        <div class="type-icon">🎯</div>
+        <div class="type-name">Instruction Tuning</div>
+        <div class="type-desc">Train model to follow instructions better. Makes base models into assistants.</div>
+        <div class="type-use">Use: When you need better instruction following</div>
+      </div>
+      <div class="type-card">
+        <div class="type-icon">🏆</div>
+        <div class="type-name">RLHF</div>
+        <div class="type-desc">Reinforcement Learning from Human Feedback. Aligns with human preferences.</div>
+        <div class="type-use">Use: ChatGPT-style alignment. Complex to implement.</div>
+      </div>
+      <div class="type-card">
+        <div class="type-icon">🔄</div>
+        <div class="type-name">Transfer Learning</div>
+        <div class="type-desc">Reuse knowledge from one task for another related task.</div>
+        <div class="type-use">Use: Limited data, related domains</div>
+      </div>
+      <div class="type-card">
+        <div class="type-icon">🧊</div>
+        <div class="type-name">Few-shot Tuning</div>
+        <div class="type-desc">Fine-tune with very few examples (10-100). Efficient when data is scarce.</div>
+        <div class="type-use">Use: Niche tasks, data-limited scenarios</div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- SECTION 5: MEMORY AID -->
+  <div class="section" id="sec5">
+    <div class="section-label">
+      <span class="section-num">05</span>
+      <span class="section-title">Best Practices — Remember This</span>
+    </div>
+
+    <div class="memory-box">
+      <div class="mem-title">// memory trick — D.A.T.A</div>
+      <div class="acronym">
+        <div class="acronym-row">
+          <div class="acronym-letter">D</div>
+          <div>
+            <div class="acronym-text">Data Quality First</div>
+            <div class="acronym-sub">Garbage in = garbage out. Clean your dataset before everything else.</div>
+          </div>
+        </div>
+        <div class="acronym-row">
+          <div class="acronym-letter">A</div>
+          <div>
+            <div class="acronym-text">Avoid Overfitting</div>
+            <div class="acronym-sub">Monitor validation loss. Use early stopping. Don't train too long.</div>
+          </div>
+        </div>
+        <div class="acronym-row">
+          <div class="acronym-letter">T</div>
+          <div>
+            <div class="acronym-text">Test Hyperparameters</div>
+            <div class="acronym-sub">Learning rate is king. Start low (1e-4 to 1e-5). Tune before scaling.</div>
+          </div>
+        </div>
+        <div class="acronym-row">
+          <div class="acronym-letter">A</div>
+          <div>
+            <div class="acronym-text">Align to Real Use Case</div>
+            <div class="acronym-sub">Your training examples must mirror exactly how the model will be used in prod.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="compare-grid">
+      <div class="card" style="border-color:rgba(110,255,203,0.2)">
+        <h3 style="color:var(--accent3)">✅ Do This</h3>
+        <p style="font-size:12px;color:#b0b0c0;">
+          Use diverse examples<br>
+          Validate on held-out data<br>
+          Start with LoRA, not full FT<br>
+          Log every experiment<br>
+          Use a hyperparameter scheduler
+        </p>
+      </div>
+      <div class="card" style="border-color:rgba(255,110,124,0.2)">
+        <h3 style="color:var(--accent2)">❌ Avoid This</h3>
+        <p style="font-size:12px;color:#b0b0c0;">
+          Training on messy/noisy data<br>
+          Skipping eval metrics<br>
+          Using too high a learning rate<br>
+          Fine-tuning when prompting works<br>
+          Ignoring catastrophic forgetting
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- CHEATSHEET -->
+  <div class="section">
+    <div class="section-label">
+      <span class="section-num">06</span>
+      <span class="section-title">Quick Cheatsheet — Key Terms</span>
+    </div>
+
+    <div class="cheatsheet">
+      <div class="cs-item">
+        <div class="cs-term">LoRA</div>
+        <div class="cs-def">Low-Rank Adaptation — adds tiny trainable matrices. Cheap & effective.</div>
+      </div>
+      <div class="cs-item">
+        <div class="cs-term">PEFT</div>
+        <div class="cs-def">Parameter Efficient Fine-Tuning — umbrella term for LoRA, prefix tuning, etc.</div>
+      </div>
+      <div class="cs-item">
+        <div class="cs-term">RLHF</div>
+        <div class="cs-def">Reinforcement Learning from Human Feedback. Used to align ChatGPT.</div>
+      </div>
+      <div class="cs-item">
+        <div class="cs-term">Overfitting</div>
+        <div class="cs-def">Model memorizes training data, fails on new inputs. Val loss goes up.</div>
+      </div>
+      <div class="cs-item">
+        <div class="cs-term">Catastrophic Forgetting</div>
+        <div class="cs-def">Model forgets general knowledge when fine-tuned too aggressively.</div>
+      </div>
+      <div class="cs-item">
+        <div class="cs-term">Learning Rate</div>
+        <div class="cs-def">How fast weights update. Too high = unstable. Too low = slow. ~1e-4 is safe.</div>
+      </div>
+      <div class="cs-item">
+        <div class="cs-term">Base Model</div>
+        <div class="cs-def">The pre-trained model you start with (LLaMA, Mistral, GPT, etc.)</div>
+      </div>
+      <div class="cs-item">
+        <div class="cs-term">Adapter</div>
+        <div class="cs-def">Small trained module added on top of frozen base model layers.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- MINI QUIZ -->
+  <div class="section" id="sec6">
+    <div class="section-label">
+      <span class="section-num">07</span>
+      <span class="section-title">Quick Quiz — Test Yourself</span>
+    </div>
+
+    <div class="quiz-section" id="quizBox">
+      <div class="quiz-q" id="quizQ">Loading question...</div>
+      <div class="quiz-options" id="quizOptions"></div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+      <button class="next-q" id="nextQ">Next Question →</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Scroll progress bar
+  window.addEventListener('scroll', () => {
+    const scrolled = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+    document.getElementById('scrollBar').style.width = scrolled + '%';
+
+    // Update progress steps
+    const total = document.body.scrollHeight - window.innerHeight;
+    const pct = window.scrollY / total;
+    document.getElementById('progressFill').style.width = (pct * 100) + '%';
+
+    const steps = ['s1','s2','s3','s4','s5','s6'];
+    steps.forEach((id, i) => {
+      if (pct > i / steps.length) document.getElementById(id).className = 'done';
+    });
+  });
+
+  // Quiz logic
+  const questions = [
+    {
+      q: "What is the main advantage of LoRA over full fine-tuning?",
+      opts: ["Better accuracy", "Much cheaper — trains only small adapter layers", "Works without any data", "Faster inference speed"],
+      correct: 1,
+      feedback: "Correct! LoRA trains tiny low-rank matrices instead of all weights — up to 90% less compute."
+    },
+    {
+      q: "When should you choose RAG over fine-tuning?",
+      opts: ["When data never changes", "When you need domain-specific language", "When knowledge updates frequently", "When speed is critical"],
+      correct: 2,
+      feedback: "Right! RAG is ideal when your data changes often — no need to retrain the model."
+    },
+    {
+      q: "What does 'catastrophic forgetting' mean?",
+      opts: ["GPU crashes during training", "Model forgets general knowledge when fine-tuned too hard", "Training data gets deleted", "Model refuses to answer questions"],
+      correct: 1,
+      feedback: "Exactly! Over-aggressive fine-tuning can make the model lose its general capabilities."
+    },
+    {
+      q: "What does RLHF stand for?",
+      opts: ["Recursive Learning from Helpful Feedback", "Reinforcement Learning from Human Feedback", "Reduced Layer Hierarchical Fine-tuning", "Random Loss Handling Function"],
+      correct: 1,
+      feedback: "Yes! RLHF is how OpenAI trained ChatGPT to align with human preferences."
+    },
+    {
+      q: "What should you do if your validation loss rises while training loss drops?",
+      opts: ["Train longer", "Increase learning rate", "Stop training — model is overfitting", "Add more layers"],
+      correct: 2,
+      feedback: "Correct! Rising val loss = overfitting. Use early stopping to save the best checkpoint."
+    }
+  ];
+
+  let current = 0;
+  let score = 0;
+  let answered = false;
+
+  function loadQuestion() {
+    answered = false;
+    const q = questions[current];
+    document.getElementById('quizQ').textContent = `Q${current+1}/${questions.length}: ${q.q}`;
+    document.getElementById('quizFeedback').style.display = 'none';
+    document.getElementById('nextQ').style.display = 'none';
+
+    const opts = document.getElementById('quizOptions');
+    opts.innerHTML = '';
+    q.opts.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-btn';
+      btn.textContent = opt;
+      btn.onclick = () => answer(i, btn);
+      opts.appendChild(btn);
+    });
+  }
+
+  function answer(idx, btn) {
+    if (answered) return;
+    answered = true;
+    const q = questions[current];
+    const btns = document.querySelectorAll('.quiz-btn');
+    btns.forEach(b => b.style.pointerEvents = 'none');
+
+    if (idx === q.correct) {
+      btn.className = 'quiz-btn correct';
+      score++;
+    } else {
+      btn.className = 'quiz-btn wrong';
+      btns[q.correct].className = 'quiz-btn correct';
+    }
+
+    const fb = document.getElementById('quizFeedback');
+    fb.textContent = q.feedback;
+    fb.style.display = 'block';
+
+    const nq = document.getElementById('nextQ');
+    nq.style.display = 'inline-block';
+    if (current === questions.length - 1) nq.textContent = `See Score →`;
+  }
+
+  document.getElementById('nextQ').onclick = () => {
+    current++;
+    if (current < questions.length) {
+      loadQuestion();
+    } else {
+      document.getElementById('quizBox').innerHTML = `
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:48px;margin-bottom:12px;">${score === questions.length ? '🏆' : score >= 3 ? '✅' : '📖'}</div>
+          <div style="font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;margin-bottom:8px;">
+            ${score}/${questions.length} correct
+          </div>
+          <div style="font-size:12px;color:var(--muted);">
+            ${score === questions.length ? "Perfect! You've mastered fine-tuning basics 🎉" : score >= 3 ? "Great job! Review the sections you missed." : "Go back and re-read the notes, then try again!"}
+          </div>
+          <button onclick="current=0;score=0;loadQuestion();" style="margin-top:20px;background:var(--accent);color:white;border:none;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;padding:10px 24px;border-radius:8px;cursor:pointer;">Retry Quiz</button>
+        </div>`;
+    }
+  };
+
+  loadQuestion();
+</script>
+</body>
+</html>
