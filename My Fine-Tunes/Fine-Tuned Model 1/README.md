@@ -2,41 +2,56 @@
 
 ## Overview
 
-This is my **first personally fine-tuned model** showcased in this repository.
+This is my **first completed fine-tuned model** showcased in this repository.
 
-The model is a fine-tuned **Microsoft DeBERTa-v3-base** model developed for the **Forensics AI / email threat detection** use case.
+The model is based on **Microsoft DeBERTa-v3-base** and was fine-tuned for **binary email threat classification** as part of an AI-powered email security and forensic intelligence use case.
 
-## Why I Fine-Tuned This Model
+## What the Model Does
 
-The purpose of this fine-tuning experiment was to adapt a pretrained language model for **email threat classification**.
-
-The model classifies an email into two categories:
+The model analyzes email text and predicts one of two classes:
 
 - **BENIGN**
 - **MALICIOUS**
 
-The model metadata identifies the task as binary_email_threat_classification.
+It is intended to act as the **AI classification component** of a broader email threat detection pipeline.
 
-## Base Model
+## Model Information
 
-- **Base model:** microsoft/deberta-v3-base
-- **Architecture:** DeBERTa-v3-base
+- **Base model:** `microsoft/deberta-v3-base`
+- **Architecture:** DeBERTa / Transformer-based encoder
 - **Task:** Binary email threat classification
 - **Labels:** BENIGN / MALICIOUS
+- **Parameters:** Approximately **184.4M**
 - **Maximum sequence length:** 256
-- **Tokenizer:** DebertaV2Tokenizer
-- **Training dataset:** ForentisAI_DeBERTa_Dataset_V2
+- **Tokenizer:** `DebertaV2Tokenizer`
+- **Training dataset:** `ForentisAI_DeBERTa_Dataset_V2`
 - **Dataset type:** Synthetic
+- **Training environment:** Google Colab
+- **Model format:** Safetensors
 
-The model configuration identifies the underlying architecture as DebertaV2ForSequenceClassification, with 12 hidden layers, 12 attention heads, and a hidden size of 768.
+## Hugging Face Model
 
-## Fine-Tuning Environment
+The complete fine-tuned model is hosted on Hugging Face.
 
-The fine-tuning experiment was performed in **Google Colab**.
+**Model repository:**
 
-The best checkpoint recorded in the model metadata is:
+https://huggingface.co/sudiptaroy07/forentisai-deberta-v3-email-threat-classifier
 
+The Hugging Face repository contains the large model artifact and is the recommended location for downloading and testing the complete model.
+
+## Fine-Tuning
+
+The model was fine-tuned from:
+
+```text
+microsoft/deberta-v3-base
+```
+
+The best checkpoint recorded in the training metadata was:
+
+```text
 /content/forentisai_deberta_v3/checkpoint-1312
+```
 
 ## Evaluation
 
@@ -50,45 +65,73 @@ The recorded evaluation was performed on **4,499 synthetic test samples**.
 | F1 | 1.00 |
 | ROC-AUC | 1.00 |
 
-**Important:** These results come from the synthetic ForentisAI V2 test set and do **not** establish real-world deployment performance.
+> **Important:** These results come from a synthetic test set and do **not** establish equivalent real-world deployment performance.
 
-## Repository Files
+## Manual Testing
 
-The model directory is intentionally separated into:
+The model was also tested manually with previously unseen, constructed email examples.
 
-### 1. Model
+It correctly classified several benign, obvious phishing, subtle phishing, and Business Email Compromise-style examples during basic testing. One deliberately subtle phishing-style example was classified as `benign`, demonstrating that high-confidence predictions are not guaranteed to be correct.
 
-This is where the actual fine-tuned model artifact will be placed.
+This is why additional testing on diverse and representative real-world email data is required before production deployment.
 
-The complete model is approximately **700 MB**, so the model binary itself is not intended to be stored directly in this GitHub repository.
+## Repository Organization
 
-### 2. Model Files
+### `Model/`
 
-This directory contains the supporting files required to describe or load the model, such as:
+The `Model/` directory documents where the large model artifact belongs conceptually.
 
-- Configuration
-- Tokenizer
-- Tokenizer configuration
-- Deployment information
-- Model metadata
-- Other supporting artifacts
+The complete model is approximately **700 MB** and is hosted on Hugging Face instead of being stored directly in GitHub.
 
-### 3. README.md
+See:
 
-This file documents this specific fine-tuned model: why it was created, which base model was used, what task it performs, the training dataset, evaluation information, and the associated artifacts.
+https://huggingface.co/sudiptaroy07/forentisai-deberta-v3-email-threat-classifier
+
+### `Model Files/`
+
+This directory contains the smaller supporting files that describe the model and its deployment configuration.
+
+Current files include:
+
+- `config.json`
+- `deployment_info.json`
+- `forentisai_model.json`
+- `tokenizer_config.json`
 
 ## Model Purpose
 
-This model is part of my practical experimentation in **AI-powered email threat detection and forensic intelligence**.
+This model is part of my practical work in **AI-powered email threat detection and forensic intelligence**.
 
-It is designed as a classification component that can identify whether an email is benign or malicious.
+It can be used as one component of a larger workflow:
+
+```text
+Incoming Email
+      ↓
+Email Text Extraction
+      ↓
+Text Preprocessing
+      ↓
+DeBERTa Threat Classifier
+      ↓
+BENIGN / MALICIOUS
+      ↓
+Additional Security Analysis
+      ↓
+Final Threat Assessment
+```
+
+## Limitations
+
+- The training and evaluation dataset is synthetic.
+- The reported metrics may not represent real-world performance.
+- False positives and false negatives are possible.
+- The model may encounter threat patterns that were not represented in training.
+- A high confidence score does not guarantee a correct prediction.
+- The model should not be the sole decision-maker for cybersecurity incidents.
+- Representative real-world evaluation is required before production deployment.
 
 ## Status
 
 **Fine-tuned — Completed**
-
-The model and its supporting artifacts will be added to this directory manually.
-
----
 
 **Fine-tuned by Sudipta Roy**
