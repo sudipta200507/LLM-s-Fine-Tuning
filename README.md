@@ -47,7 +47,7 @@ Each fine-tuning project can contain:
 
 | Model | Purpose | Fine-Tuning Environment | Status |
 |---|---|---|---|
-| **T5 — Forensics AI** | Fine-tuned for the Forensics AI project | Google Colab | Completed |
+| **Fine-Tuned Model 1 — DeBERTa-v3 Email Threat Classifier** | Email threat classification for the Forensics AI use case | Google Colab | Completed |
 
 More models and experiments will be added here as I fine-tune them.
 
@@ -93,8 +93,12 @@ LLM-s-Fine-Tuning/
 │   └── finetune-llms-notes.html
 │
 └── My Fine-Tunes/
-    └── T5-Forensics-AI/
-        └── README.md
+    └── Fine-Tuned Model 1/
+        ├── README.md
+        ├── Model/
+        │   └── README.md
+        └── Model Files/
+            └── README.md
 ```
 
 ## Fine-Tuning Philosophy
